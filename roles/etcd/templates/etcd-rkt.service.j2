@@ -8,6 +8,9 @@ Restart=on-failure
 RestartSec=10s
 TimeoutStartSec=0
 LimitNOFILE=40000
+User={{ etcd_user_id }}
+Group={{ etcd_group_id }}
+SupplementaryGroups={{ etcd_cert_group_id }}
 
 ExecStart=/usr/bin/rkt run \
 --uuid-file-save=/var/run/etcd.uuid \
@@ -19,6 +22,11 @@ ExecStart=/usr/bin/rkt run \
 --mount=volume=var-lib-etcd,target=/var/lib/etcd \
 --set-env-file=/etc/etcd.env \
 --stage1-from-dir=stage1-fly.aci \
+{% for c in etcd_drop_cap %}
+--caps-remove=CAP_{{ c.upper() }} \
+{% endfor %}
+--memory={{ etcd_memory_limit }} --cpu={{ etcd_cpu_limit }} \
+--user={{ etcd_user_id }} --group={{ etcd_group_id }} \
 {{ etcd_image_repo }}:{{ etcd_image_tag }} \
 --name={{ etcd_member_name | default("etcd") }}
 

@@ -52,7 +52,7 @@ before_script:
   ETCD_DEPLOYMENT: "docker"
   KUBELET_DEPLOYMENT: "docker"
   MAGIC: "ci check this"
-  
+
 .gce: &gce
   <<: *job
   <<: *docker_service

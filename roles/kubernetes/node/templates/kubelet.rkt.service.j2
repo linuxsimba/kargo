@@ -26,7 +26,7 @@ ExecStart=/usr/bin/rkt run \
         --volume etc-ssl-certs,kind=host,source=/etc/ssl/certs,readOnly=true \
         --volume usr-share-certs,kind=host,source=/usr/share/ca-certificates,readOnly=true \
         --volume var-lib-docker,kind=host,source={{ docker_daemon_graph }},readOnly=false \
-	--volume var-lib-kubelet,kind=host,source=/var/lib/kubelet,readOnly=false \
+        --volume var-lib-kubelet,kind=host,source=/var/lib/kubelet,readOnly=false \
         --volume run,kind=host,source=/run,readOnly=false \
         --mount volume=var-log,target=/var/log \
         --mount volume=dns,target=/etc/resolv.conf \
@@ -37,6 +37,8 @@ ExecStart=/usr/bin/rkt run \
         --mount volume=var-lib-kubelet,target=/var/lib/kubelet \
         --mount volume=run,target=/run \
         --stage1-from-dir=stage1-fly.aci \
+        --memory={{ kubelet_memory_limit }} \
+        --cpu={{ kubelet_cpu_limit }} \
         {{ hyperkube_image_repo }}:{{ hyperkube_image_tag }} \
         --uuid-file-save=/var/run/kubelet.uuid \
         --debug --exec=/kubelet -- \

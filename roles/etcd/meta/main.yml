@@ -2,7 +2,7 @@
 dependencies:
   - role: adduser
     user: "{{ addusers.etcd }}"
-    when: ansible_os_family != 'Container Linux by CoreOS'
+    tags: bootstrap-os
   - role: download
     file: "{{ downloads.etcd }}"
     tags: download
