@@ -19,11 +19,13 @@ env:
     BOOTSTRAP_OS=none
   matrix:
     - >-
-      KUBE_NETWORK_PLUGIN=calico
-      CLOUD_IMAGE=coreos-stable
+      KUBE_NETWORK_PLUGIN=flannel
+      CLOUD_IMAGE=ubuntu-1604-xenial
       CLOUD_REGION=asia-east1-c
-      CLUSTER_MODE=default
-      BOOTSTRAP_OS=coreos
+      CLUSTER_MODE=separated
+      BOOTSTRAP_OS=none
+      ETCD_DEPLOYMENT=rkt
+      KUBELET_DEPLOYMENT=rkt
 
 before_install:
   # Install Ansible.
@@ -75,6 +77,8 @@ script:
     -e download_localhost=true
     -e local_release_dir=/var/tmp/releases
     -e deploy_netchecker=true
+    -e etcd_deployment_type=${ETCD_DEPLOYMENT}
+    -e kubelet_deployment_type=${KUBELET_DEPLOYMENT}
     cluster.yml --skip-tags=bastion
 
     # Tests Cases
