@@ -1,4 +1,5 @@
 stages:
+  - moderator
   - unit-tests
   - deploy-gce-part1
   - deploy-gce-part2
@@ -17,7 +18,7 @@ variables:
 # us-west1-a
 
 before_script:
-    - pip install ansible
+    - pip install ansible==2.2.1.0
     - pip install netaddr
     - pip install apache-libcloud==0.20.1
     - pip install boto==2.9.0
@@ -48,12 +49,14 @@ before_script:
   GS_SECRET_ACCESS_KEY: $GS_SECRET
   ANSIBLE_KEEP_REMOTE_FILES: "1"
   BOOTSTRAP_OS: none
+  IDEMPOT_CHECK: "false"
   RESOLVCONF_MODE: docker_dns
   LOG_LEVEL: "-vv"
   ETCD_DEPLOYMENT: "docker"
   KUBELET_DEPLOYMENT: "docker"
+  WEAVE_CPU_LIMIT: "100m"
   MAGIC: "ci check this"
-  
+
 .gce: &gce
   <<: *job
   <<: *docker_service
@@ -62,10 +65,9 @@ before_script:
     paths:
       - downloads/
       - $HOME/.cache
-  stage: deploy-gce
   before_script:
     - docker info
-    - pip install ansible==2.1.3.0
+    - pip install ansible==2.2.1.0
     - pip install netaddr
     - pip install apache-libcloud==0.20.1
     - pip install boto==2.9.0
@@ -84,31 +86,37 @@ before_script:
     - ls
     - echo ${PWD}
     - >
-      ansible-playbook tests/cloud_playbooks/create-gce.yml -i tests/local_inventory/hosts.cfg -c local $LOG_LEVEL
-      -e mode=${CLUSTER_MODE}
-      -e test_id=${TEST_ID}
-      -e kube_network_plugin=${KUBE_NETWORK_PLUGIN}
+      ansible-playbook tests/cloud_playbooks/create-gce.yml -i tests/local_inventory/hosts.cfg -c local 
+      ${LOG_LEVEL}
+      -e cloud_image=${CLOUD_IMAGE}
+      -e cloud_region=${CLOUD_REGION}
+      -e gce_credentials_file=${HOME}/.ssh/gce.json
       -e gce_project_id=${GCE_PROJECT_ID}
       -e gce_service_account_email=${GCE_ACCOUNT}
-      -e gce_credentials_file=${HOME}/.ssh/gce.json
-      -e cloud_image=${CLOUD_IMAGE}
       -e inventory_path=${PWD}/inventory/inventory.ini
-      -e cloud_region=${CLOUD_REGION}
+      -e kube_network_plugin=${KUBE_NETWORK_PLUGIN}
+      -e mode=${CLUSTER_MODE}
+      -e test_id=${TEST_ID}
 
     # Create cluster
     - >
-      ansible-playbook -i inventory/inventory.ini -u $SSH_USER -e ansible_ssh_user=$SSH_USER $SSH_ARGS
-      -b --become-user=root -e cloud_provider=gce $LOG_LEVEL -e kube_network_plugin=${KUBE_NETWORK_PLUGIN}
-      --private-key=${HOME}/.ssh/id_rsa
-      -e bootstrap_os=${BOOTSTRAP_OS}
+      ansible-playbook -i inventory/inventory.ini -b --become-user=root --private-key=${HOME}/.ssh/id_rsa -u $SSH_USER
+      ${SSH_ARGS}
+      ${LOG_LEVEL}
       -e ansible_python_interpreter=${PYPATH}
-      -e download_run_once=true
-      -e download_localhost=true
+      -e ansible_ssh_user=${SSH_USER} 
+      -e bootstrap_os=${BOOTSTRAP_OS}
+      -e cloud_provider=gce
       -e deploy_netchecker=true
-      -e resolvconf_mode=${RESOLVCONF_MODE}
-      -e local_release_dir=${PWD}/downloads
+      -e download_localhost=true
+      -e download_run_once=true
       -e etcd_deployment_type=${ETCD_DEPLOYMENT}
+      -e kube_network_plugin=${KUBE_NETWORK_PLUGIN}
       -e kubelet_deployment_type=${KUBELET_DEPLOYMENT}
+      -e local_release_dir=${PWD}/downloads
+      -e resolvconf_mode=${RESOLVCONF_MODE}
+      -e weave_cpu_requests=${WEAVE_CPU_LIMIT}
+      -e weave_cpu_limit=${WEAVE_CPU_LIMIT}
       cluster.yml
 
 
@@ -121,6 +129,69 @@ before_script:
 
     ## Advanced DNS checks
     - ansible-playbook -i inventory/inventory.ini -e ansible_python_interpreter=${PYPATH} -u $SSH_USER -e ansible_ssh_user=$SSH_USER $SSH_ARGS -b --become-user=root tests/testcases/040_check-network-adv.yml $LOG_LEVEL
+
+    ## Idempotency checks 1/5 (repeat deployment)
+    - >
+      if [ "${IDEMPOT_CHECK}" = "true" ]; then
+      ansible-playbook -i inventory/inventory.ini -u $SSH_USER -e ansible_ssh_user=$SSH_USER $SSH_ARGS 
+      -b --become-user=root -e cloud_provider=gce $LOG_LEVEL -e kube_network_plugin=${KUBE_NETWORK_PLUGIN} 
+      --private-key=${HOME}/.ssh/id_rsa 
+      -e bootstrap_os=${BOOTSTRAP_OS} 
+      -e ansible_python_interpreter=${PYPATH} 
+      -e download_run_once=true 
+      -e download_localhost=true 
+      -e deploy_netchecker=true 
+      -e resolvconf_mode=${RESOLVCONF_MODE} 
+      -e local_release_dir=${PWD}/downloads 
+      -e etcd_deployment_type=${ETCD_DEPLOYMENT} 
+      -e kubelet_deployment_type=${KUBELET_DEPLOYMENT} 
+      cluster.yml;
+      fi
+
+    ## Idempotency checks 2/5 (Advanced DNS checks)
+    - >
+      if [ "${IDEMPOT_CHECK}" = "true" ]; then
+      ansible-playbook -i inventory/inventory.ini -e ansible_python_interpreter=${PYPATH} 
+      -u $SSH_USER -e ansible_ssh_user=$SSH_USER $SSH_ARGS -b --become-user=root 
+      tests/testcases/040_check-network-adv.yml $LOG_LEVEL;
+      fi
+
+    ## Idempotency checks 3/5 (reset deployment)
+    - >
+      if [ "${IDEMPOT_CHECK}" = "true" ]; then
+      ansible-playbook -i inventory/inventory.ini -u $SSH_USER -e ansible_ssh_user=$SSH_USER $SSH_ARGS 
+      -b --become-user=root -e cloud_provider=gce $LOG_LEVEL -e kube_network_plugin=${KUBE_NETWORK_PLUGIN} 
+      --private-key=${HOME}/.ssh/id_rsa 
+      -e bootstrap_os=${BOOTSTRAP_OS} 
+      -e ansible_python_interpreter=${PYPATH} 
+      reset.yml;
+      fi
+
+    ## Idempotency checks 4/5 (redeploy after reset)
+    - >
+      if [ "${IDEMPOT_CHECK}" = "true" ]; then
+      ansible-playbook -i inventory/inventory.ini -u $SSH_USER -e ansible_ssh_user=$SSH_USER $SSH_ARGS 
+      -b --become-user=root -e cloud_provider=gce $LOG_LEVEL -e kube_network_plugin=${KUBE_NETWORK_PLUGIN} 
+      --private-key=${HOME}/.ssh/id_rsa 
+      -e bootstrap_os=${BOOTSTRAP_OS} 
+      -e ansible_python_interpreter=${PYPATH} 
+      -e download_run_once=true 
+      -e download_localhost=true 
+      -e deploy_netchecker=true 
+      -e resolvconf_mode=${RESOLVCONF_MODE} 
+      -e local_release_dir=${PWD}/downloads 
+      -e etcd_deployment_type=${ETCD_DEPLOYMENT} 
+      -e kubelet_deployment_type=${KUBELET_DEPLOYMENT} 
+      cluster.yml;
+      fi
+
+    ## Idempotency checks 5/5 (Advanced DNS checks)
+    - >
+      if [ "${IDEMPOT_CHECK}" = "true" ]; then
+      ansible-playbook -i inventory/inventory.ini -e ansible_python_interpreter=${PYPATH} 
+      -u $SSH_USER -e ansible_ssh_user=$SSH_USER $SSH_ARGS -b --become-user=root 
+      tests/testcases/040_check-network-adv.yml $LOG_LEVEL;
+      fi
 
   after_script:
     - >
@@ -139,9 +210,9 @@ before_script:
 .coreos_calico_sep_variables: &coreos_calico_sep_variables
 # stage: deploy-gce-part1
   KUBE_NETWORK_PLUGIN: calico
-  CLOUD_IMAGE: coreos-stable
+  CLOUD_IMAGE: coreos-stable-1235-6-0-v20170111        
   CLOUD_REGION: us-west1-b
-  CLUSTER_MODE: separated
+  CLUSTER_MODE: separate
   BOOTSTRAP_OS: coreos
   RESOLVCONF_MODE: host_resolvconf # This is required as long as the CoreOS stable channel uses docker < 1.12
 
@@ -176,25 +247,27 @@ before_script:
 .coreos_canal_variables: &coreos_canal_variables
 # stage: deploy-gce-part2
   KUBE_NETWORK_PLUGIN: canal
-  CLOUD_IMAGE: coreos-stable
+  CLOUD_IMAGE: coreos-stable-1235-6-0-v20170111
   CLOUD_REGION: us-east1-b
   CLUSTER_MODE: default
   BOOTSTRAP_OS: coreos
   RESOLVCONF_MODE: host_resolvconf # This is required as long as the CoreOS stable channel uses docker < 1.12
+  IDEMPOT_CHECK: "true"
 
 .rhel7_canal_sep_variables: &rhel7_canal_sep_variables
 # stage: deploy-gce-special
   KUBE_NETWORK_PLUGIN: canal
   CLOUD_IMAGE: rhel-7
   CLOUD_REGION: us-east1-b
-  CLUSTER_MODE: separated
+  CLUSTER_MODE: separate
 
 .ubuntu_weave_sep_variables: &ubuntu_weave_sep_variables
 # stage: deploy-gce-special
   KUBE_NETWORK_PLUGIN: weave
   CLOUD_IMAGE: ubuntu-1604-xenial
   CLOUD_REGION: us-central1-b
-  CLUSTER_MODE: separated
+  CLUSTER_MODE: separate
+  IDEMPOT_CHECK: "false"
 
 .centos7_calico_ha_variables: &centos7_calico_ha_variables
 # stage: deploy-gce-special
@@ -202,6 +275,7 @@ before_script:
   CLOUD_IMAGE: centos-7
   CLOUD_REGION: europe-west1-b
   CLUSTER_MODE: ha
+  IDEMPOT_CHECK: "true"
 
 .coreos_alpha_weave_ha_variables: &coreos_alpha_weave_ha_variables
 # stage: deploy-gce-special
@@ -216,7 +290,7 @@ before_script:
   KUBE_NETWORK_PLUGIN: flannel
   CLOUD_IMAGE: ubuntu-1604-xenial
   CLOUD_REGION: us-central1-b
-  CLUSTER_MODE: separated
+  CLUSTER_MODE: separate
   ETCD_DEPLOYMENT: rkt
   KUBELET_DEPLOYMENT: rkt
 
@@ -435,14 +509,20 @@ ubuntu-rkt-sep:
   only: ['master', /^pr-.*$/]
 
 # Premoderated with manual actions
-syntax-check:
+ci-authorized:
   <<: *job
-  stage: unit-tests
+  stage: moderator
   before_script:
     - apt-get -y install jq
   script:
-    - ansible-playbook -i inventory/local-tests.cfg -u root -e ansible_ssh_user=root  -b --become-user=root cluster.yml -vvv  --syntax-check
     - /bin/sh scripts/premoderator.sh
+  except: ['triggers', 'master']
+  
+syntax-check:
+  <<: *job
+  stage: unit-tests
+  script:
+    - ansible-playbook -i inventory/local-tests.cfg -u root -e ansible_ssh_user=root  -b --become-user=root cluster.yml -vvv  --syntax-check
   except: ['triggers', 'master']
 
 tox-inventory-builder:
