@@ -1,3 +1,22 @@
+# External IP controller settings
+
+# Use the latest external ip controller code
+extip_image_tag: "latest"
+
+# Only create /32 entries
+extip_mask: 32
+
+# attach the created IPs to the lo interface
+extip_iface: lo
+
+# For ECMP place the generated IPs on 2 kubernetes nodes
+extip_ctrl_replicas: 2
+
+# Apply IP on all claimcontrollers..use network ECMP
+extip_distribution: all
+
+################
+
 # Valid bootstrap options (required): ubuntu, coreos, centos, none
 bootstrap_os: none
 

@@ -26,7 +26,7 @@
 - hosts: k8s-cluster:etcd:calico-rr
   any_errors_fatal: true
   roles:
-    - { role: kubernetes/preinstall, tags: preinstall }
+    - { role: kubernetes/preinstall, tags: ['preinstall','externalip'] }
     - { role: docker, tags: docker }
     - { role: rkt, tags: rkt, when: "'rkt' in [ etcd_deployment_type, kubelet_deployment_type ]" }
 
@@ -58,6 +58,7 @@
   roles:
     - { role: dnsmasq, when: "dns_mode == 'dnsmasq_kubedns'", tags: dnsmasq }
     - { role: kubernetes/preinstall, when: "dns_mode != 'none' and resolvconf_mode == 'host_resolvconf'", tags: resolvconf }
+    - { role: externalip , tags: 'externalip' }
 
 - hosts: kube-master[0]
   any_errors_fatal: true
