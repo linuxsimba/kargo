@@ -3,9 +3,9 @@ local_release_dir: /tmp
 
 # if this is set to true will only download files once. Doesn't work
 # on Container Linux by CoreOS unless the download_localhost is true and localhost
-# is running another OS type. Default compress level is 9 (best).
+# is running another OS type. Default compress level is 1 (fastest).
 download_run_once: False
-download_compress: 9
+download_compress: 1
 
 # if this is set to true, uses the localhost for download_run_once mode
 # (requires docker and sudo to access docker). You may want this option for
@@ -59,11 +59,9 @@ hyperkube_image_repo: "quay.io/coreos/hyperkube"
 hyperkube_image_tag: "{{ kube_version }}_coreos.0"
 pod_infra_image_repo: "gcr.io/google_containers/pause-amd64"
 pod_infra_image_tag: "{{ pod_infra_version }}"
-netcheck_tag: v0.1
-netcheck_kubectl_tag: v0.18.0-120-gaeb4ac55ad12b1-dirty
-netcheck_agent_img_repo: "quay.io/l23network/mcp-netchecker-agent"
-netcheck_server_img_repo: "quay.io/l23network/mcp-netchecker-server"
-netcheck_kubectl_img_repo: "gcr.io/google_containers/kubectl"
+netcheck_tag: "v1.0"
+netcheck_agent_img_repo: "quay.io/l23network/k8s-netchecker-agent"
+netcheck_server_img_repo: "quay.io/l23network/k8s-netchecker-server"
 weave_kube_image_repo: "weaveworks/weave-kube"
 weave_kube_image_tag: "{{ weave_version }}"
 weave_npc_image_repo: "weaveworks/weave-npc"
@@ -82,6 +80,15 @@ kubedns_image_repo: "gcr.io/google_containers/kubedns-amd64"
 kubedns_image_tag: "{{ kubedns_version }}"
 test_image_repo: busybox
 test_image_tag: latest
+elasticsearch_version: "v2.4.1"
+elasticsearch_image_repo: "gcr.io/google_containers/elasticsearch"
+elasticsearch_image_tag: "{{ elasticsearch_version }}"
+fluentd_version: "1.22"
+fluentd_image_repo: "gcr.io/google_containers/fluentd-elasticsearch"
+fluentd_image_tag: "{{ fluentd_version }}"
+kibana_version: "v4.6.1"
+kibana_image_repo: "gcr.io/google_containers/kibana"
+kibana_image_tag: "{{ kibana_version }}"
 
 downloads:
   netcheck_server:
@@ -95,12 +102,6 @@ downloads:
     repo: "{{ netcheck_agent_img_repo }}"
     tag: "{{ netcheck_tag }}"
     sha256: "{{ netcheck_agent_digest_checksum|default(None) }}"
-    enabled: "{{ deploy_netchecker|bool }}"
-  netcheck_kubectl:
-    container: true
-    repo: "{{ netcheck_kubectl_img_repo }}"
-    tag: "{{ netcheck_kubectl_tag }}"
-    sha256: "{{ netcheck_kubectl_digest_checksum|default(None) }}"
     enabled: "{{ deploy_netchecker|bool }}"
   etcd:
     version: "{{etcd_version}}"
@@ -203,6 +204,21 @@ downloads:
     repo: "{{ exechealthz_image_repo }}"
     tag: "{{ exechealthz_image_tag }}"
     sha256: "{{ exechealthz_digest_checksum|default(None) }}"
+  elasticsearch:
+    container: true
+    repo: "{{ elasticsearch_image_repo }}"
+    tag: "{{ elasticsearch_image_tag }}"
+    sha256: "{{ elasticsearch_digest_checksum|default(None) }}"
+  fluentd:
+    container: true
+    repo: "{{ fluentd_image_repo }}"
+    tag: "{{ fluentd_image_tag }}"
+    sha256: "{{ fluentd_digest_checksum|default(None) }}"
+  kibana:
+    container: true
+    repo: "{{ kibana_image_repo }}"
+    tag: "{{ kibana_image_tag }}"
+    sha256: "{{ kibana_digest_checksum|default(None) }}"
 
 download:
   container: "{{ file.container|default('false') }}"

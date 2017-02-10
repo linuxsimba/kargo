@@ -44,9 +44,17 @@ kube_cert_group: kube-cert
 kube_log_level: 2
 
 # Kubernetes 1.5 added a new flag to the apiserver to disable anonymous auth. In previos versions, anonymous auth was
-# not implemented. As the new flag defaults to true, we have to explicetely disable it. Change this line if you want the
+# not implemented. As the new flag defaults to true, we have to explicitly disable it. Change this line if you want the
 # 1.5 default behavior. The flag is actually only added if the used kubernetes version is >= 1.5
 kube_api_anonymous_auth: false
+
+#
+# For some things, kubelet needs to load kernel modules.  For example, dynamic kernel services are needed
+# for mounting persistent volumes into containers.  These may not be loaded by preinstall kubernetes
+# processes.  For example, ceph and rbd backed volumes.  Set to true to allow kubelet to load kernel
+# modules.
+#
+kubelet_load_modules: false
 
 # Users to create for basic auth in Kubernetes API via HTTP
 kube_api_pwd: "changeme"
@@ -65,7 +73,7 @@ ndots: 2
 # Deploy netchecker app to verify DNS resolve as an HTTP service
 deploy_netchecker: false
 
-# For some environments, each node has a pubilcally accessible
+# For some environments, each node has a publicly accessible
 # address and an address it should bind services to.  These are
 # really inventory level variables, but described here for consistency.
 #
@@ -124,8 +132,9 @@ peer_with_router: false
 # Warning : enabling router peering will disable calico's default behavior ('node mesh').
 # The subnets of each nodes will be distributed by the datacenter router
 
-# The port the API Server will be listening on.
+# API Server service IP address in Kubernetes internal network.
 kube_apiserver_ip: "{{ kube_service_addresses|ipaddr('net')|ipaddr(1)|ipaddr('address') }}"
+# The port the API Server will be listening on.
 kube_apiserver_port: 443 # (https)
 kube_apiserver_insecure_port: 8080 # (http)
 # local loadbalancer should use this port instead - default to kube_apiserver_port
@@ -205,3 +214,12 @@ kpm_packages: []
 rkt_version: 1.21.0
 etcd_deployment_type: docker
 kubelet_deployment_type: docker
+vault_deployment_type: docker
+
+efk_enabled: false
+
+## Certificate Management
+## This setting determines whether certs are generated via scripts or whether a
+## cluster of Hashicorp's Vault is started to issue certificates (using etcd
+## as a backend). Options are "script" or "vault"
+cert_management: script
