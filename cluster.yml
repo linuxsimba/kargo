@@ -26,7 +26,8 @@
 - hosts: k8s-cluster:etcd:calico-rr
   any_errors_fatal: true
   roles:
-    - { role: kubernetes/preinstall, tags: ['preinstall','externalip'] }
+    - { role: kernel-upgrade, tags: kernel-upgrade, when: kernel_upgrade is defined and kernel_upgrade }
+    - { role: kubernetes/preinstall, tags: ['preinstall, externalip'] }
     - { role: docker, tags: docker }
     - role: rkt
       tags: rkt
