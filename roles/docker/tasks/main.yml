@@ -68,12 +68,15 @@
   notify: restart docker
   when: (not ansible_os_family in ["CoreOS", "Container Linux by CoreOS"]) and (docker_package_info.pkgs|length > 0)
 
-- name: check minimum docker version for docker_dns mode. You need at least docker version >= 1.12 for resolvconf_mode=docker_dns
-  raw: docker version -f "{{ '{{' }}.Client.Version{{ '}}' }}"
-  register: docker_version
-  failed_when: docker_version.stdout|version_compare('1.12', '<')
-  changed_when: false
-  when: dns_mode != 'none' and resolvconf_mode == 'docker_dns'
+# fails during automated install
+# comment it out for now
+# error: he error was: Version comparison: LooseVersion instance has no attribute '
+#- name: check minimum docker version for docker_dns mode. You need at least docker version >= 1.12 for resolvconf_mode=docker_dns
+#  raw: docker version -f "{{ '{{' }}.Client.Version{{ '}}' }}"
+#  register: docker_version
+#  failed_when: docker_version.stdout|version_compare('1.12', '<')
+#  changed_when: false
+#  when: dns_mode != 'none' and resolvconf_mode == 'docker_dns'
 
 - name: Set docker systemd config
   include: systemd.yml
