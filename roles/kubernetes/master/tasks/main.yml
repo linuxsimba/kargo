@@ -13,7 +13,6 @@
 
 - name: Install kubectl bash completion
   shell: "{{ bin_dir }}/kubectl completion bash >/etc/bash_completion.d/kubectl.sh"
-  #no_log: true
   when: ansible_os_family in ["Debian","RedHat"]
   tags: kubectl
 
@@ -36,7 +35,9 @@
 - meta: flush_handlers
 
 - name: copy kube system namespace manifest
-  copy: src=namespace.yml dest={{kube_config_dir}}/{{system_namespace}}-ns.yml
+  copy:
+    src: namespace.yml
+    dest: "{{kube_config_dir}}/{{system_namespace}}-ns.yml"
   run_once: yes
   when: inventory_hostname == groups['kube-master'][0]
   tags: apps
@@ -68,3 +69,7 @@
     dest: "{{ kube_manifest_dir }}/kube-scheduler.manifest"
   notify: Master | wait for kube-scheduler
   tags: kube-scheduler
+
+- include: post-upgrade.yml
+  tags: k8s-post-upgrade
+

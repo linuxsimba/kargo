@@ -23,7 +23,7 @@ Some variables of note include:
 * *hyperkube_image_repo* - Specify the Docker repository where Hyperkube
   resides
 * *hyperkube_image_tag* - Specify the Docker tag where Hyperkube resides
-* *kube_network_plugin* - Changes k8s plugin to Calico
+* *kube_network_plugin* - Sets k8s network plugin (default Calico)
 * *kube_proxy_mode* - Changes k8s proxy mode to iptables mode
 * *kube_version* - Specify a given Kubernetes hyperkube version
 * *searchdomains* - Array of DNS domains to search when looking up hostnames
@@ -41,8 +41,9 @@ Some variables of note include:
   address instead of localhost for kube-masters and kube-master[0] for
   kube-nodes. See more details in the
   [HA guide](https://github.com/kubernetes-incubator/kargo/blob/master/docs/ha-mode.md).
-* *loadbalancer_apiserver_localhost* - If enabled, all hosts will connect to
-  the apiserver internally load balanced endpoint.  See more details in the
+* *loadbalancer_apiserver_localhost* - makes all hosts to connect to
+  the apiserver internally load balanced endpoint. Mutual exclusive to the
+  `loadbalancer_apiserver`. See more details in the
   [HA guide](https://github.com/kubernetes-incubator/kargo/blob/master/docs/ha-mode.md).
 
 #### Cluster variables
@@ -101,4 +102,3 @@ Stack](https://github.com/kubernetes-incubator/kargo/blob/master/docs/dns-stack.
 
 Kargo sets up two Kubernetes accounts by default: ``root`` and ``kube``. Their
 passwords default to changeme. You can set this by changing ``kube_api_pwd``.
-
