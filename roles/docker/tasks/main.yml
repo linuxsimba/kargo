@@ -34,11 +34,19 @@
     keyserver: "{{docker_repo_key_info.keyserver}}"
     state: present
   register: keyserver_task_result
-  until: keyserver_task_result|success
+  until: keyserver_task_result|succeeded
   retries: 4
   delay: "{{ retry_stagger | random + 3 }}"
   with_items: "{{ docker_repo_key_info.repo_keys }}"
-  when: not ansible_os_family in ["CoreOS", "Container Linux by CoreOS"]
+  when: not (ansible_os_family in ["CoreOS", "Container Linux by CoreOS"] or is_atomic)
+
+- name: ensure docker repository is enabled
+  action: "{{ docker_repo_info.pkg_repo }}"
+  args:
+    repo: "{{item}}"
+    state: present
+  with_items: "{{ docker_repo_info.repos }}"
+  when: not (ansible_os_family in ["CoreOS", "Container Linux by CoreOS"] or is_atomic) and (docker_repo_info.repos|length > 0)
 
 - name: ensure docker repository is enabled
   action: "{{ docker_repo_info.pkg_repo }}"
@@ -67,16 +75,6 @@
   with_items: "{{ docker_package_info.pkgs }}"
   notify: restart docker
   when: (not ansible_os_family in ["CoreOS", "Container Linux by CoreOS"]) and (docker_package_info.pkgs|length > 0)
-
-# fails during automated install
-# comment it out for now
-# error: he error was: Version comparison: LooseVersion instance has no attribute '
-#- name: check minimum docker version for docker_dns mode. You need at least docker version >= 1.12 for resolvconf_mode=docker_dns
-#  raw: docker version -f "{{ '{{' }}.Client.Version{{ '}}' }}"
-#  register: docker_version
-#  failed_when: docker_version.stdout|version_compare('1.12', '<')
-#  changed_when: false
-#  when: dns_mode != 'none' and resolvconf_mode == 'docker_dns'
 
 - name: Set docker systemd config
   include: systemd.yml

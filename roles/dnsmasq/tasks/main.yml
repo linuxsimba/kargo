@@ -1,4 +1,6 @@
 ---
+- include: pre_upgrade.yml
+
 - name: ensure dnsmasq.d directory exists
   file:
     path: /etc/dnsmasq.d
@@ -34,7 +36,8 @@
   register: dnsmasq_config
 
 - name: Stat dnsmasq configuration
-  stat: path=/etc/dnsmasq.d/01-kube-dns.conf
+  stat:
+    path: /etc/dnsmasq.d/01-kube-dns.conf
   register: sym
 
 - name: Move previous configuration
@@ -49,33 +52,19 @@
     state: link
 
 - name: Create dnsmasq manifests
-  template: src={{item.file}} dest={{kube_config_dir}}/{{item.file}}
+  template:
+    src: "{{item.file}}"
+    dest: "{{kube_config_dir}}/{{item.file}}"
   with_items:
-    - {file: dnsmasq-ds.yml, type: ds}
-    - {file: dnsmasq-svc.yml, type: svc}
+    - {name: dnsmasq, file: dnsmasq-deploy.yml, type: deployment}
+    - {name: dnsmasq, file: dnsmasq-svc.yml, type: svc}
+    - {name: dnsmasq-autoscaler, file: dnsmasq-autoscaler.yml, type: deployment}
   register: manifests
   when: inventory_hostname == groups['kube-master'][0]
 
-#FIXME: remove manifests.changed condition if kubernetes/features#124 is implemented
-- name: Delete existing dnsmasq daemonset 
-  kube:
-    name: dnsmasq
-    namespace: "{{system_namespace}}"
-    kubectl: "{{bin_dir}}/kubectl"
-    resource: "{{item.item.type}}"
-    filename: "{{kube_config_dir}}/{{item.item.file}}"
-    kubectl: "{{ bin_dir }}/kubectl"
-    filename: "{{ kube_config_dir }}/weave-net.yml"
-    resource: "ds"
-    namespace: "{{system_namespace}}"
-    state: absent
-  with_items: "{{ manifests.results }}"
-  when: inventory_hostname == groups['kube-master'][0] and item.item.type == "ds" and (manifests.changed or dnsmasq_config.changed)
-
-
 - name: Start Resources
   kube:
-    name: dnsmasq
+    name: "{{item.item.name}}"
     namespace: "{{system_namespace}}"
     kubectl: "{{bin_dir}}/kubectl"
     resource: "{{item.item.type}}"
@@ -90,4 +79,4 @@
     port: 53
     delay: 5
   when: inventory_hostname == groups['kube-node'][0]
-  tags: facts
+

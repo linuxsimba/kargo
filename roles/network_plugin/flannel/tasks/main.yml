@@ -42,19 +42,19 @@
   shell: cat /run/flannel/subnet.env | awk -F'=' '$1 == "FLANNEL_SUBNET" {print $2}'
   register: flannel_subnet_output
   changed_when: false
+  check_mode: no
 
 - set_fact:
     flannel_subnet: "{{ flannel_subnet_output.stdout }}"
-  tags: facts
 
 - name: Flannel | Get flannel_mtu from subnet.env
   shell: cat /run/flannel/subnet.env | awk -F'=' '$1 == "FLANNEL_MTU" {print $2}'
   register: flannel_mtu_output
   changed_when: false
+  check_mode: no
 
 - set_fact:
     flannel_mtu: "{{ flannel_mtu_output.stdout }}"
-  tags: facts
 
 - set_fact:
     docker_options_file: >-
@@ -68,7 +68,6 @@
 
 - set_fact:
     docker_network_options: '"--bip={{ flannel_subnet }} --mtu={{ flannel_mtu }}"'
-  tags: facts
 
 - name: Flannel | Ensure path for docker network systemd drop-in
   file:

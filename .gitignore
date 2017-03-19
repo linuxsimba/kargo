@@ -1,6 +1,8 @@
 .vagrant
 *.retry
 inventory/vagrant_ansible_inventory
+inventory/group_vars/fake_hosts.yml
+inventory/host_vars/
 temp
 .idea
 .tox
@@ -13,3 +15,4 @@ temp
 **/*.sw[pon]
 /ssh-bastion.conf
 **/*.sw[pon]
+vagrant/

@@ -1,7 +1,9 @@
 ---
 
 - name: reset | stop services
-  service: name={{ item }} state=stopped
+  service:
+    name: "{{ item }}"
+    state: stopped
   with_items:
     - kubelet
     - etcd
@@ -33,11 +35,14 @@
   shell: "{{ docker_bin_dir }}/docker ps -aq | xargs -r docker rm -fv"
 
 - name: reset | restart docker if needed
-  service: name=docker state=restarted
+  service:
+    name: docker
+    state: restarted
   when: docker_dropins_removed.changed
 
 - name: reset | gather mounted kubelet dirs
   shell: mount | grep /var/lib/kubelet | awk '{print $3}' | tac
+  check_mode: no
   register: mounted_dirs
 
 - name: reset | unmount kubelet dirs
@@ -45,11 +50,13 @@
   with_items: '{{ mounted_dirs.stdout_lines }}'
 
 - name: reset | delete some files and directories
-  file: path={{ item }} state=absent
+  file:
+    path: "{{ item }}"
+    state: absent
   with_items:
     - "{{kube_config_dir}}"
     - /var/lib/kubelet
-    - /var/lib/etcd
+    - "{{ etcd_data_dir }}"
     - /etc/ssl/etcd
     - /var/log/calico
     - /etc/cni
@@ -91,4 +98,4 @@
       networking
       {%- endif %}
     state: restarted
-  when: ansible_os_family != "CoreOS"
+  when: ansible_os_family not in ["CoreOS", "Container Linux by CoreOS"]

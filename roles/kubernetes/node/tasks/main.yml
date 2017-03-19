@@ -8,16 +8,22 @@
   tags: kubelet
 
 - include: nginx-proxy.yml
-  when: is_kube_master == false and loadbalancer_apiserver_localhost|default(false)
+  when: is_kube_master == false and loadbalancer_apiserver_localhost|default(true)
   tags: nginx
 
 - name: Write kubelet config file
-  template: src=kubelet.j2 dest={{ kube_config_dir }}/kubelet.env backup=yes
+  template:
+    src: kubelet.j2
+    dest: "{{ kube_config_dir }}/kubelet.env"
+    backup: yes
   notify: restart kubelet
   tags: kubelet
 
 - name: write the kubecfg (auth) file for kubelet
-  template: src=node-kubeconfig.yaml.j2 dest={{ kube_config_dir }}/node-kubeconfig.yaml backup=yes
+  template:
+    src: node-kubeconfig.yaml.j2
+    dest: "{{ kube_config_dir }}/node-kubeconfig.yaml"
+    backup: yes
   notify: restart kubelet
   tags: kubelet
 

@@ -8,7 +8,7 @@ The inventory is composed of 3 groups:
 
 * **kube-node** : list of kubernetes nodes where the pods will run.
 * **kube-master** : list of servers where kubernetes master components (apiserver, scheduler, controller) will run.
-* **etcd**: list of server to compose the etcd server. you should have at least 3 servers for failover purposes.
+* **etcd**: list of servers to compose the etcd server. You should have at least 3 servers for failover purpose.
 
 Note: do not modify the children of _k8s-cluster_, like putting
 the _etcd_ group into the _k8s-cluster_, unless you are certain
@@ -67,7 +67,9 @@ Group vars and overriding variables precedence
 ----------------------------------------------
 
 The group variables to control main deployment options are located in the directory ``inventory/group_vars``.
-
+Optional variables are located in the `inventory/group_vars/all.yml`.
+Mandatory variables that are common for at least one role (or a node group) can be found in the
+`inventory/group_vars/k8s-cluster.yml`.
 There are also role vars for docker, rkt, kubernetes preinstall and master roles.
 According to the [ansible docs](http://docs.ansible.com/ansible/playbooks_variables.html#variable-precedence-where-should-i-put-a-variable),
 those cannot be overriden from the group vars. In order to override, one should use
@@ -160,7 +162,7 @@ ansible-playbook -i inventory/inventory.ini -e dns_server='' cluster.yml --tags 
 And this prepares all container images localy (at the ansible runner node) without installing
 or upgrading related stuff or trying to upload container to K8s cluster nodes:
 ```
-ansible-playbook -i inventory/inventory.ini cluster.yaml \
+ansible-playbook -i inventory/inventory.ini cluster.yml \
     -e download_run_once=true -e download_localhost=true \
     --tags download --skip-tags upload,upgrade
 ```
